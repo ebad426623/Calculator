@@ -1,106 +1,100 @@
-let runningTotal = 0;
-let buffer = "0";
-let previousOperator;
-
-
-const screen = document.querySelector('.screen');
-
-function buttonClick(value){
-    if(isNaN(value)) {
-        handleSymbol(value);
-    } else {
-        handleNumber(value);
-    }
-
-    screen.innerText = buffer;
-}
-
-
-
-function handleSymbol(symbol) {
-    switch (symbol) {
-        case 'C':
-            buffer = '0';
-            runningTotal = '0';
-            break;
-
-        case '=':
-            if(previousOperator === null) {
-                return;
-            }
-            flushOperation(parseInt(buffer));
-            previousOperator = null;
-            buffer = runningTotal;
-            runningTotal = 0;
-            break;
-
-        case '←':
-            if(buffer.length === 1)
-                buffer = '0';
-            else    
-                buffer = buffer.substring(0, buffer.length - 1);
-            break;  
-
-
-        case '+':
-        case '-':
-        case '×':
-        case '÷':
-            handleMath(symbol);
-            break;
-    }
-}
-
-
-
-function handleMath(symbol) {
-    if(buffer === '0') {
-        return;
-    }
-
-    const intBuffer = parseInt(buffer);
-
-    if(runningTotal === 0) {
-        runningTotal = intBuffer;
-    } else {
-        flushOperation(intBuffer);
-    }
-
-    previousOperator = symbol;
-    buffer = '0';
-}
-
-
-
-function flushOperation(intBuffer) {
-    if(previousOperator === '+') {
-        runningTotal += intBuffer;
-    }
-
-    else if(previousOperator === '-') {      
-        runningTotal -= intBuffer;
-    }
-    else if(previousOperator === '×') { 
-        runningTotal *= intBuffer;
-    } else {  
-        runningTotal /= intBuffer;
-    }
-}
-
-function handleNumber(numberString) {
-    if(buffer === "0") 
-        buffer = numberString;
+class Calculator {
+  constructor() {
+    this.runningTotal = 0;
+    this.buffer = "0";
+    this.previousOperator = null;
+    this.prevNum = 0;
+    this.equalsPressed = false;
+    this.screen = document.querySelector(".screen");
     
-    else 
-        buffer += numberString;
+    this.init();
+  }
+
+  init() {
+    document.querySelector('.calc-buttons').addEventListener('click', (event) => {
+      this.handleInput(event.target.innerText);
+    });
+  }
+
+  handleInput(value) {
+    isNaN(value) ? this.handleSymbol(value) : this.handleNumber(value);
+    this.updateScreen();
+  }
+
+  handleSymbol(symbol) {
+    const symbolHandlers = {
+      'AC': () => this.reset(),
+      '=': () => this.handleEquals(),
+      '←': () => this.handleBackspace(),
+      default: () => this.handleOperator(symbol)
+    };
+
+    (symbolHandlers[symbol] || symbolHandlers.default)();
+  }
+
+  handleNumber(numberString) {
+    if (this.equalsPressed) this.reset();
+    this.buffer = this.buffer === "0" ? numberString : this.buffer + numberString;
+  }
+
+  handleEquals() {
+    if (this.equalsPressed) {
+      this.flushOperation(this.prevNum);
+    } else {
+      this.equalsPressed = true;
+      this.prevNum = parseInt(this.buffer);
+      this.flushOperation(parseInt(this.buffer));
+    }
+    this.buffer = this.runningTotal.toString();
+  }
+
+  handleBackspace() {
+    if (this.equalsPressed) {
+      this.runningTotal = 0;
+      this.previousOperator = null;
+      this.equalsPressed = false;
+    }
+    this.buffer = this.buffer.length === 1 ? "0" : this.buffer.slice(0, -1);
+  }
+
+  handleOperator(symbol) {
+    const currentValue = parseInt(this.buffer);
+    
+    if (this.previousOperator === null) {
+      this.runningTotal = currentValue;
+    } else if (!this.equalsPressed) {
+      this.flushOperation(currentValue);
+    }
+    
+    this.previousOperator = symbol;
+    this.buffer = "0";
+    this.equalsPressed = false;
+  }
+
+  flushOperation(intBuffer) {
+    const operations = {
+      '+': (a, b) => a + b,
+      '−': (a, b) => a - b,
+      '×': (a, b) => a * b,
+      '÷': (a, b) => a / b
+    };
+
+    if (this.previousOperator && operations[this.previousOperator]) {
+      this.runningTotal = operations[this.previousOperator](this.runningTotal, intBuffer);
+    }
+  }
+
+  reset() {
+    this.buffer = "0";
+    this.runningTotal = 0;
+    this.previousOperator = null;
+    this.prevNum = 0;
+    this.equalsPressed = false;
+  }
+
+  updateScreen() {
+    this.screen.innerText = this.buffer;
+  }
 }
 
-
-function init() {
-    document.querySelector('.calc-buttons').addEventListener('click', function(event){
-        buttonClick(event.target.innerText);
-    })
-}
-
-
-init();
+new Calculator();
